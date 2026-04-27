@@ -1,0 +1,201 @@
+# .agents — Project Context for AI Coding Assistants
+
+## Project Overview
+
+This is a fullstack TypeScript monorepo ("tsProject") with:
+- **Backend**: Node.js + Express 5 + Prisma ORM + PostgreSQL
+- **Frontend**: React 19 + Vite 8 + TailwindCSS 4 + React Router v7
+- **Database**: PostgreSQL (via Docker Compose), schema managed by Prisma
+
+---
+
+## Repository Structure
+
+```
+tsProject/
+├── backend/                  # Express API server
+│   ├── src/
+│   │   ├── config/           # DB connection (Prisma client)
+│   │   ├── controllers/      # Request orchestration layer
+│   │   ├── routes/           # Express route definitions
+│   │   └── services/         # Business logic & Prisma queries
+│   ├── prisma/
+│   │   ├── schema.prisma     # Database schema
+│   │   └── migrations/       # Auto-generated Prisma migrations
+│   ├── generated/            # Prisma generated client (DO NOT edit manually)
+│   ├── main.ts               # Script entrypoint (seed/test runner)
+│   ├── server.ts             # Express app entrypoint
+│   ├── prisma.config.ts      # Prisma config
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── .env                  # Environment variables (not committed)
+│   └── .env.example          # Template for .env
+│
+├── frontend/                 # React SPA
+│   ├── src/
+│   │   ├── components/       # React components (Home, Get, Login, Destinos)
+│   │   ├── App.tsx           # Root component
+│   │   ├── main.tsx          # React DOM entry
+│   │   └── routes.tsx        # React Router route definitions
+│   ├── public/
+│   ├── index.html
+│   └── vite.config.ts
+│
+├── generated/                # Shared generated output (root level)
+├── tsconfig.json             # Root TypeScript config
+└── package.json              # Root workspace package.json
+```
+
+---
+
+## Tech Stack
+
+### Backend
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Node.js | LTS | Runtime |
+| TypeScript | ~5.9 | Language |
+| Express | ^5.2 | HTTP framework |
+| Prisma | ^7.3 | ORM + migrations |
+| PostgreSQL | via Docker | Database |
+| `pg` | ^8.20 | Postgres driver |
+| `dotenv` | ^17 | Env config |
+| `tsx` | ^4.21 | TS execution (dev) |
+
+### Frontend
+| Tool | Version | Purpose |
+|------|---------|---------|
+| React | ^19.2 | UI framework |
+| Vite | ^8.0 | Build tool & dev server |
+| TypeScript | ~5.9 | Language |
+| TailwindCSS | ^4.2 | Styling |
+| React Router | ^7.13 | Client-side routing |
+
+---
+
+## Database Models (Prisma)
+
+```prisma
+model Usuario {
+  id      Int           @id @default(autoincrement())
+  email   String        @unique
+  name    String?
+  coments Comentarios[]
+}
+
+model Destinos {
+  id          Int     @id @default(autoincrement())
+  nome        String?
+  descricao   String  @unique
+  coordenadas String  @unique
+  imagem      String  @unique
+}
+
+model Comentarios {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?  @db.Text
+  published Boolean  @default(false)
+  author    Usuario  @relation(fields: [authorId], references: [id])
+  authorId  Int
+}
+
+model Admin {
+  id       Int    @id @default(autoincrement())
+  password String @unique
+  email    String @unique
+}
+```
+
+---
+
+## Frontend Routes
+
+| Path | Component | Description |
+|------|-----------|-------------|
+| `*` (default) | `<Home>` | Landing / home page |
+| `/get` | `<Get>` | Data fetching page |
+| `/login` | `<Name>` (Login) | Login page |
+
+---
+
+## Architecture Patterns
+
+### Backend Layered Architecture
+```
+Route → Controller → Service → Prisma (DB)
+```
+- **Routes** (`src/routes/`): Define HTTP endpoints, delegate to Controllers
+- **Controllers** (`src/controllers/`): Orchestrate request/response logic
+- **Services** (`src/services/`): Business logic and all Prisma queries
+
+> Always keep Prisma queries inside `services/`. Controllers must NOT query the DB directly.
+
+### Frontend Component Pattern
+- Components live in `src/components/`
+- Routing defined centrally in `src/routes.tsx`
+- Use functional components with React hooks
+
+---
+
+## Environment Variables
+
+See `backend/.env.example` for required variables. Key vars:
+- `DATABASE_URL` — Prisma connection string
+- `PORT` — Express server port
+
+---
+
+## Running the Project
+
+### Backend
+```bash
+cd backend
+npm run dev       # tsx --watch server.ts
+```
+
+### Frontend
+```bash
+cd frontend
+npm run dev       # vite dev server
+```
+
+### Database (Docker)
+```bash
+cd backend
+docker-compose up -d
+```
+
+### Prisma
+```bash
+# Generate client after schema changes
+npx prisma generate
+
+# Run migrations
+npx prisma migrate dev --name <migration_name>
+
+# Open Prisma Studio
+npx prisma studio
+```
+
+---
+
+## Coding Conventions
+
+- **Language**: TypeScript everywhere (strict mode preferred)
+- **Imports**: Use `.js` extension in backend imports (ESM)
+- **Exports**: Named exports preferred over default exports
+- **Async**: Always use `async/await`, not `.then()` chains
+- **Error handling**: Use try/catch in controllers; let errors bubble up from services
+- **Env access**: Always via `process.env.*` with dotenv loaded at entry point
+- **Generated files**: Never edit files in `generated/` manually
+
+---
+
+## Key Files to Know
+
+- `backend/prisma/schema.prisma` — Source of truth for DB models
+- `backend/src/config/database.ts` — Prisma client singleton
+- `backend/server.ts` — Express app boot
+- `frontend/src/routes.tsx` — All client-side routes
+- `frontend/src/App.tsx` — Root React component

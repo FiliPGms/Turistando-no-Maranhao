@@ -1,0 +1,19 @@
+node_modules
+generated
+.vscode
+.env
+dist
+build
+.tsbuildinfo
+
+# Logs
+logs
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# temp files
+*.tmp

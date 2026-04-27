@@ -1,0 +1,63 @@
+# tsProject
+
+> A full-stack TypeScript project featuring a React frontend, an Express backend, and a PostgreSQL database managed via Prisma ORM.
+
+## Project Overview
+
+This repository is a monorepo structure designed for modern web development using TypeScript across the entire stack. It includes a reactive frontend SPA and a robust backend API.
+
+## Tech Stack
+
+### Backend
+- **Framework**: Express 5
+- **Runtime**: Node.js
+- **ORM**: Prisma 7.3
+- **Database**: PostgreSQL (via Docker Compose)
+- **Language**: TypeScript 5.9
+- **Tools**: tsx (execution), dotenv
+
+### Frontend
+- **Framework**: React 19
+- **Build Tool**: Vite 8
+- **Styling**: TailwindCSS 4
+- **Routing**: React Router 7
+- **Language**: TypeScript 5.9
+
+## Repository Structure
+
+- `/backend`: Contains the Express API server.
+    - `/src/controllers`: Request handling logic.
+    - `/src/services`: Business logic and database interactions.
+    - `/prisma`: Database schema and migrations.
+- `/frontend`: Contains the React application.
+    - `/src/components`: UI components (Home, Get, Login).
+    - `/src/routes.tsx`: Centralized route definitions.
+
+## Key Features
+
+- **Database Models**:
+    - `Usuario`: User account information.
+    - `Destinos`: Destination data (location, description, images).
+    - `Comentarios`: User-generated comments linked to authors.
+    - `Admin`: Administrative credentials.
+- **Frontend Routes**:
+    - `/`: Home page.
+    - `/get`: Data retrieval interface.
+    - `/login`: User authentication page.
+
+## Getting Started
+
+### Backend
+1. `cd backend`
+2. `npm run dev` (Starts server via tsx)
+3. Ensure Docker is running for PostgreSQL (`docker-compose up -d`)
+
+### Frontend
+1. `cd frontend`
+2. `npm run dev` (Starts Vite dev server)
+
+## Coding Conventions
+- TypeScript strictly enforced.
+- Layered architecture: Route -> Controller -> Service -> Prisma.
+- Environment variables managed via `.env`.
+- Avoid direct database queries in controllers.

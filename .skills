@@ -1,0 +1,310 @@
+# .skills — Reusable Patterns & Recipes for AI Coding Assistants
+
+This file documents established patterns used in this project.
+When asked to add a feature, always follow the patterns below.
+
+---
+
+## 1. Add a New Backend Resource (Full CRUD)
+
+Follow the layered pattern: **Route → Controller → Service → Prisma**
+
+### Step 1 — Add model to `prisma/schema.prisma`
+```prisma
+model Post {
+  id        Int     @id @default(autoincrement())
+  title     String
+  content   String? @db.Text
+  authorId  Int
+  author    Usuario @relation(fields: [authorId], references: [id])
+}
+```
+Then run:
+```bash
+npx prisma migrate dev --name add_post
+npx prisma generate
+```
+
+### Step 2 — Create `src/services/postService.ts`
+```typescript
+import { prisma } from "../config/database.js";
+
+export const postService = {
+  async getAll() {
+    return prisma.post.findMany();
+  },
+  async getById(id: number) {
+    return prisma.post.findUnique({ where: { id } });
+  },
+  async create(data: { title: string; content?: string; authorId: number }) {
+    return prisma.post.create({ data });
+  },
+  async updateById(id: number, data: Partial<{ title: string; content: string }>) {
+    return prisma.post.update({ where: { id }, data });
+  },
+  async deleteById(id: number) {
+    return prisma.post.delete({ where: { id } });
+  },
+};
+```
+
+### Step 3 — Create `src/controllers/postController.ts`
+```typescript
+import { Request, Response } from "express";
+import { postService } from "../services/postService.js";
+
+export const postController = {
+  async getAll(req: Request, res: Response) {
+    const posts = await postService.getAll();
+    res.json(posts);
+  },
+  async getById(req: Request, res: Response) {
+    const post = await postService.getById(Number(req.params.id));
+    if (!post) return res.status(404).json({ error: "Not found" });
+    res.json(post);
+  },
+  async create(req: Request, res: Response) {
+    const post = await postService.create(req.body);
+    res.status(201).json(post);
+  },
+  async update(req: Request, res: Response) {
+    const post = await postService.updateById(Number(req.params.id), req.body);
+    res.json(post);
+  },
+  async remove(req: Request, res: Response) {
+    await postService.deleteById(Number(req.params.id));
+    res.status(204).send();
+  },
+};
+```
+
+### Step 4 — Create `src/routes/postRoute.ts`
+```typescript
+import { Router } from "express";
+import { postController } from "../controllers/postController.js";
+
+const router = Router();
+
+router.get("/", postController.getAll);
+router.get("/:id", postController.getById);
+router.post("/", postController.create);
+router.put("/:id", postController.update);
+router.delete("/:id", postController.remove);
+
+export default router;
+```
+
+### Step 5 — Register route in `server.ts`
+```typescript
+import postRouter from "./src/routes/postRoute.ts";
+app.use(express.json());
+app.use("/posts", postRouter);
+```
+
+---
+
+## 2. Add a New Frontend Page
+
+### Step 1 — Create component in `frontend/src/components/`
+```tsx
+// frontend/src/components/Posts.tsx
+export function Posts() {
+  return (
+    <div>
+      <h1>Posts</h1>
+    </div>
+  );
+}
+```
+
+### Step 2 — Register route in `frontend/src/routes.tsx`
+```tsx
+import { Posts } from './components/Posts';
+
+// Inside <Routes>:
+<Route path="/posts" element={<Posts />} />
+```
+
+---
+
+## 3. Fetch Data from Backend in a React Component
+
+```tsx
+import { useEffect, useState } from "react";
+
+type Post = { id: number; title: string; content?: string };
+
+export function Posts() {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/posts")
+      .then((r) => r.json())
+      .then((data) => {
+        setPosts(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
+
+  return (
+    <ul>
+      {posts.map((p) => (
+        <li key={p.id}>{p.title}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+> Configure Vite dev proxy in `frontend/vite.config.ts` to forward `/api` to `http://localhost:PORT`.
+
+---
+
+## 4. Vite Dev Proxy Setup (avoid CORS in development)
+
+```typescript
+// frontend/vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
+});
+```
+
+---
+
+## 5. Add Environment Variable (Backend)
+
+1. Add to `backend/.env`:
+   ```
+   MY_SECRET=value
+   ```
+2. Add to `backend/.env.example` (no real value):
+   ```
+   MY_SECRET=
+   ```
+3. Access in code:
+   ```typescript
+   const secret = process.env.MY_SECRET;
+   ```
+> `dotenv/config` is already imported in `server.ts` — no extra setup needed.
+
+---
+
+## 6. Prisma Client Singleton Pattern
+
+Already set up in `backend/src/config/database.ts`. Always import from there:
+```typescript
+import { prisma } from "../config/database.js";
+```
+Never instantiate `new PrismaClient()` outside that file.
+
+---
+
+## 7. Error Handling Pattern (Backend)
+
+Wrap controller methods in try/catch or use an error-handling middleware:
+
+```typescript
+// Global error handler — register last in server.ts
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: err.message });
+});
+```
+
+For async controllers, use:
+```typescript
+export const getAll = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await myService.getAll();
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+---
+
+## 8. Docker — Start / Stop Database
+
+```bash
+# Start Postgres container
+cd backend && docker-compose up -d
+
+# Stop without removing data
+docker-compose stop
+
+# Stop and remove volumes (wipe DB)
+docker-compose down -v
+```
+
+---
+
+## 9. Adding a TailwindCSS v4 Utility Class
+
+TailwindCSS v4 scans your files automatically (no `content` config needed).
+Just add classes directly in JSX:
+```tsx
+<div className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-md">
+  ...
+</div>
+```
+
+---
+
+## 10. TypeScript Import Convention (Backend)
+
+Because the backend uses `"type": "module"` (ESM), always use `.js` extensions in imports even for `.ts` source files:
+```typescript
+// ✅ Correct
+import { userService } from "../services/userService.js";
+
+// ❌ Wrong
+import { userService } from "../services/userService";
+```
+
+---
+
+## Quick Reference — Common Prisma Queries
+
+```typescript
+// Find all
+await prisma.usuario.findMany();
+
+// Find one by id
+await prisma.usuario.findUnique({ where: { id } });
+
+// Create
+await prisma.usuario.create({ data: { name, email } });
+
+// Update
+await prisma.usuario.update({ where: { id }, data: { name } });
+
+// Delete
+await prisma.usuario.delete({ where: { id } });
+
+// Find with relation
+await prisma.usuario.findMany({ include: { coments: true } });
+
+// Upsert
+await prisma.usuario.upsert({
+  where: { email },
+  update: { name },
+  create: { name, email },
+});
+```
