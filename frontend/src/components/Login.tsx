@@ -25,7 +25,7 @@ export function Login() {
             })
             alert("We are now getting your Location to suggest you the best spots!!");
         }else{
-            console.log("Login failed", data.error);
+            console.log("Login failed", data.message);
         }
     }
 
