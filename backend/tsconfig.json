@@ -47,6 +47,6 @@
     "skipLibCheck": true,
     "composite": true,
   },
-  "include": ["main.ts", "src/**/*.ts", "prisma/**/*.ts", "generated/**/*.ts", "server.ts"],
+  "include": ["src/**/*.ts", "prisma/**/*.ts", "generated/**/*.ts", "server.ts"],
   "exclude": ["node_modules", "../frontend"]
 }

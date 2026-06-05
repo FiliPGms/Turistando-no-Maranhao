@@ -1,11 +1,9 @@
-import { json } from "node:stream/consumers";
 import { prisma } from "../config/database.js";
 
 export const userService = {
   async createUser(data: { name: string; email: string; password: string }){
     return await prisma.usuario.create({data})
   },
-
   async authenticateUser(email:string,password:string){
     const user = await prisma.usuario.findUnique({
       where: {email}
